@@ -1,0 +1,84 @@
+apply plugin: 'com.android.application'
+
+apply plugin: 'kotlin-android'
+
+apply plugin: 'kotlin-android-extensions'
+
+android {
+    String verName = "git describe".execute().text.trim()
+    if(verName.contains('-')){
+        verName = verName.replace('-','.')
+        verName = verName.substring(0, verName.lastIndexOf("."))
+    }
+    else{
+        verName = verName + ".0"
+    }
+    def (MAJOR, MINOR, PATCH) = verName.replace("v","").tokenize('.')
+    Integer verCode = 1000*Integer.parseInt(MAJOR) + 100*Integer.parseInt(MINOR) + Integer.parseInt(PATCH)
+
+    println(verCode)
+
+    Properties signingProperties = new Properties()
+    def file = project.rootProject.file('signing.properties')
+    if (file.exists()) {
+        signingProperties.load(file.newDataInputStream())
+    }
+    def prodSigning_keystoreFile = new File(projectDir.toString()+ "\\" + signingProperties.getProperty('keystore.file'))
+    def prodSigning_keystorePassword = signingProperties.getProperty('keystore.password')
+    def prodSigning_keyAlias = signingProperties.getProperty('key.alias')
+    def prodSigning_keyPassword = signingProperties.getProperty('key.password')
+
+    signingConfigs {
+        production {
+            storeFile prodSigning_keystoreFile
+            storePassword prodSigning_keystorePassword
+            keyAlias prodSigning_keyAlias
+            keyPassword prodSigning_keyPassword
+        }
+    }
+
+    compileSdkVersion 28
+    defaultConfig {
+        applicationId "com.homa_inc.androidlabs"
+        minSdkVersion 23
+        targetSdkVersion 28
+        versionCode verCode
+        versionName verName
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+    }
+
+    flavorDimensions "version"
+    productFlavors {
+        master {
+            dimension "version"
+        }
+        develop {
+            dimension "version"
+            versionName defaultConfig.versionName + "-dev"
+        }
+    }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            outputFileName = "${variant.name}-${variant.versionName}.apk"
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.production
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation"org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation 'com.android.support:appcompat-v7:28.0.0'
+    implementation 'com.android.support.constraint:constraint-layout:1.1.3'
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'com.android.support.test:runner:1.0.2'
+    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+}
